@@ -1,10 +1,9 @@
 class Node:
-    def __init__(self, start=-1, end=-1, suffix_start=-1):
-        # self.parent = None
+    def __init__(self, start=-1, end=-1, suffix_start=-1, parent=None):
+        self.parent = parent
         self.children = []
         self.start = start
         self.end = end
-        #self.mother_node = None
         # holds the start index of a suffix if this node is a leaf node
         self.suffix_start = suffix_start
         self.suffix_link = None
@@ -46,12 +45,10 @@ class SuffixTree:
 
     def implicit_tree(self):
         root = self.rootNode
-        children = self.rootNode.children
         word = self.word
         word_len = len(word)
         i = 0
         while i < word_len:
-            new_char = word[i]
             j = 0
             while j <= i:
                 result = self.traverse(i, j, root)
@@ -59,15 +56,23 @@ class SuffixTree:
                     result[0].end += 1
                     j += 1
                 elif result[2] == 2:
-                    if result[1] is None:
-                        new_leaf = Node(j, i, j)
+                    if result[1] == 0:
+                        new_leaf = Node(j, i, j, result[0])
                         result[0].children.append(new_leaf)
                     else:
+                        # in somewhere middle of the path
                         offset = result[1]
                         original_node = result[0]
+                        original_start = original_node.start
+                        parent_node = original_node.parent
                         # change the parent node of the original node to the internal node
-                        internal_node = Node()
-                        new_leaf = Node(j + offset, i, j)
+                        internal_node = Node(original_start, offset - 1, -1, parent_node)
+                        new_leaf = Node(j + offset - 1, i, j, internal_node)  # a little bug here, the start index is wrong, need to come up with a new solution
+                        original_node.start = offset
+                        parent_node.children[parent_node.children.index(original_node)] = internal_node
+                        original_node.parent = internal_node
+                        internal_node.children.append(original_node)
+                        internal_node.children.append(new_leaf)
                     j += 1
                 elif result[2] == 3:
                     break
@@ -86,23 +91,24 @@ class SuffixTree:
                 break
         if child_node is None:
             # the node is not created yet, rule two will be applied
-            return (current_node, None, 2)
+            return (current_node, 0, 2)
         else:
             node_start = child_node.start
             node_end = child_node.end
             edge_len = self.edge_length(child_node)
             if i - j <= edge_len:
-                # fix this later !!!, should be i - 1 - j + 1 if  you wanna check b4 i,
+                # when the edge length >= the length of path we need to traverse, we do not skip, else we skip to the
+                # place we want to operate directly.
                 while index <= i and node_start <= node_end and word[index] == word[node_start]:
                     node_start += 1
                     index += 1
-                    offset += 1
+                    offset += 1     # denotes the index where an internal node should be created
                 if node_start == node_end + 1:
                     # rule one will be applied
-                    return (child_node, offset - 1, 1)
-                elif index < i:
+                    return (child_node, offset, 1)
+                elif index <= i:
                     # rule two will be applied
-                    return (child_node, offset - 1, 2)
+                    return (child_node, offset, 2)
                 elif node_start <= node_end and index == i + 1:
                     #rule 3 will be applied
                     return (child_node, -1, 3)
@@ -216,6 +222,13 @@ li = {}
 word = "abc"
 
 print(li.get(word[0]))
-s = SuffixTree("abcc")
+s = SuffixTree("abad")
 s.implicit_tree()
 print(s.rootNode)
+
+node = Node()
+nodee = Node()
+liq = []
+liq.append(node)
+liq.append(nodee)
+print(liq.index(nodee))
