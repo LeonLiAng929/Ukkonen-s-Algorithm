@@ -1,6 +1,6 @@
 class Node:
-    def __init__(self, start=-1, end=-1, suffix_start=-1, parent = None):
-        self.parent = None
+    def __init__(self, start=-1, end=-1, suffix_start=-1):
+        # self.parent = None
         self.children = []
         self.start = start
         self.end = end
@@ -10,7 +10,9 @@ class Node:
         self.suffix_link = None
 
     def edge_length(self):
-        return self.end - self.start + 1
+        end = self.end
+        start = self.start
+        return end - start + 1
 
     def add_suffix_link(self, node):
         self.suffix_link = node
@@ -39,6 +41,9 @@ class SuffixTree:
         self.active_node = None
         self.active_edge = -1
 
+    def edge_length(self, node):
+        return node.end - node.start + 1
+
     def implicit_tree(self):
         root = self.rootNode
         children = self.rootNode.children
@@ -48,8 +53,8 @@ class SuffixTree:
         while i < word_len:
             new_char = word[i]
             j = 0
-            while j < i:
-                result = self.go_through_path(i, j, root)
+            while j <= i:
+                result = self.traverse(i, j, root)
                 if result[2] == 1:
                     result[0].end += 1
                     j += 1
@@ -68,7 +73,7 @@ class SuffixTree:
                     break
             i += 1
 
-    def go_through_path(self, i, j, node):
+    def traverse(self, i, j, node):
         current_node = node
         word = self.word
         children = node.children
@@ -78,15 +83,17 @@ class SuffixTree:
         for child in children:
             if word[child.start] == word[j]:
                 child_node = child
+                break
         if child_node is None:
             # the node is not created yet, rule two will be applied
             return (current_node, None, 2)
         else:
             node_start = child_node.start
             node_end = child_node.end
-            len_node = child_node.edge_length
-            if i - j + 1 <= len_node:
-                while index < i and node_start <= node_end and word[index] == word[node_start]:
+            edge_len = self.edge_length(child_node)
+            if i - j <= edge_len:
+                # fix this later !!!, should be i - 1 - j + 1 if  you wanna check b4 i,
+                while index <= i and node_start <= node_end and word[index] == word[node_start]:
                     node_start += 1
                     index += 1
                     offset += 1
@@ -96,11 +103,11 @@ class SuffixTree:
                 elif index < i:
                     # rule two will be applied
                     return (child_node, offset - 1, 2)
-                else:
+                elif node_start <= node_end and index == i + 1:
                     #rule 3 will be applied
                     return (child_node, -1, 3)
             else:
-                return self.go_through_path(i, j + len_node, child_node)
+                return self.traverse(i, j + edge_len, child_node)
 
     # def extension_rule_applier(self, i, j):
     #     root = self.rootNode
@@ -207,4 +214,8 @@ class SuffixTree:
 
 li = {}
 word = "abc"
-li.get(word[0])
+
+print(li.get(word[0]))
+s = SuffixTree("abcc")
+s.implicit_tree()
+print(s.rootNode)
